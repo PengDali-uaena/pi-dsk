@@ -8,7 +8,8 @@ export const IPC = {
   command: 'pi:command',
   event: 'pi:event',
   status: 'pi:status',
-  statusGet: 'pi:status:get'
+  statusGet: 'pi:status:get',
+  extensionResponse: 'pi:ext-ui:respond'
 } as const
 
 export type PiCommandType =
@@ -138,11 +139,39 @@ export interface PiEvent {
   [key: string]: any
 }
 
+export interface ExtensionUiResponse {
+  type: 'extension_ui_response'
+  id: string
+  value?: string
+  confirmed?: boolean
+  cancelled?: boolean
+}
+
+export interface ExtensionUiRequest {
+  type: 'extension_ui_request'
+  id: string
+  method: 'select' | 'confirm' | 'input' | 'editor' | 'notify' | 'setStatus' | 'setWidget' | 'setTitle' | 'set_editor_text'
+  title?: string
+  message?: string
+  options?: string[]
+  placeholder?: string
+  prefill?: string
+  timeout?: number
+  notifyType?: 'info' | 'warning' | 'error'
+  statusKey?: string
+  statusText?: string
+  widgetKey?: string
+  widgetLines?: string[]
+  widgetPlacement?: 'aboveEditor' | 'belowEditor'
+  text?: string
+}
+
 export interface PiApi {
   command: (command: PiCommand) => Promise<PiResponse>
   desktop: DesktopApi
   terminal: TerminalApi
   getStatus: () => Promise<PiStatus>
+  respondExtension: (response: ExtensionUiResponse) => Promise<boolean>
   onEvent: (listener: (event: PiEvent) => void) => () => void
   onStatus: (listener: (status: PiStatus) => void) => () => void
 }

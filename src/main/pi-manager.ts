@@ -35,7 +35,7 @@ export class PiManager extends EventEmitter {
   constructor(options: PiManagerOptions = {}) {
     super()
     this.binary = options.binary ?? resolvePiBinary()
-    this.args = options.args ?? ['--mode', 'rpc']
+    this.args = options.args ?? baseArgs()
     this.cwd = options.cwd ?? process.cwd()
     this.env = options.env ?? process.env
     this.spawnFn = options.spawnFn ?? nodeSpawn
@@ -113,11 +113,18 @@ export class PiManager extends EventEmitter {
     })
   }
 
+  /** 写一条不属于 request/response 模型的原始记录（如 extension_ui_response）。 */
+  sendRaw(record: Record<string, unknown>): boolean {
+    if (!this.child) return false
+    this.child.stdin.write(JSON.stringify(record) + '\n')
+    return true
+  }
+
   /** 换工作区或换会话：重启子进程（会话的 cwd 决定工具执行目录）。 */
   restart(options: { cwd?: string; sessionPath?: string }): void {
     this.dispose()
     if (options.cwd) this.cwd = options.cwd
-    this.args = options.sessionPath ? ['--mode', 'rpc', '--session', options.sessionPath] : ['--mode', 'rpc']
+    this.args = baseArgs(options.sessionPath)
     this.stderrTail = ''
     this.start()
   }
@@ -147,6 +154,17 @@ export class PiManager extends EventEmitter {
     }
     this.emit('event', record as PiEvent)
   }
+}
+
+/**
+ * 子进程参数。PI_DSK_PI_ARGS 可以追加额外参数（例如 -e 加载扩展），
+ * 空格分隔；重启会话时保留。
+ */
+export function baseArgs(sessionPath?: string): string[] {
+  const extra = (process.env.PI_DSK_PI_ARGS ?? '').split(' ').filter(Boolean)
+  const args = ['--mode', 'rpc']
+  if (sessionPath) args.push('--session', sessionPath)
+  return [...args, ...extra]
 }
 
 /** pi 可执行文件：环境变量优先，其次安装目录，最后 PATH。 */

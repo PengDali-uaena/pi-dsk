@@ -14,6 +14,7 @@ const api: PiApi = {
     openPath: (path) => ipcRenderer.invoke(DESKTOP_IPC.openPath, path),
     readFile: (path) => ipcRenderer.invoke(DESKTOP_IPC.readFile, path)
   },
+  respondExtension: (response) => ipcRenderer.invoke(IPC.extensionResponse, response),
   terminal: {
     start: (cwd) => ipcRenderer.invoke(TERMINAL_IPC.start, cwd),
     input: (data) => ipcRenderer.invoke(TERMINAL_IPC.input, data),

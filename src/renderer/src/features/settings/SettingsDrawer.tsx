@@ -7,6 +7,8 @@ export function SettingsDrawer({ onClose }: { onClose: () => void }): React.JSX.
   const sessionFile = useSession((state) => state.sessionFile)
   const thinkingLevel = useSession((state) => state.thinkingLevel)
   const model = useSession((state) => state.model)
+  const theme = useSession((state) => state.theme)
+  const setTheme = useSession((state) => state.setTheme)
 
   useEffect(() => {
     let cancelled = false
@@ -26,6 +28,18 @@ export function SettingsDrawer({ onClose }: { onClose: () => void }): React.JSX.
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             ×
           </button>
+        </div>
+
+        <div className="drawer-section">
+          <div className="drawer-label">主题</div>
+          <div className="theme-row">
+            <button type="button" className={theme === 'dark' ? 'btn btn-tiny btn-active' : 'btn btn-tiny'} onClick={() => setTheme('dark')}>
+              暗色
+            </button>
+            <button type="button" className={theme === 'light' ? 'btn btn-tiny btn-active' : 'btn btn-tiny'} onClick={() => setTheme('light')}>
+              亮色
+            </button>
+          </div>
         </div>
 
         <div className="drawer-section">

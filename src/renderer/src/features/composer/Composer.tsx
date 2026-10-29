@@ -20,6 +20,9 @@ export function Composer(): React.JSX.Element {
   const switchModel = useSession((state) => state.switchModel)
   const switchThinking = useSession((state) => state.switchThinking)
   const dismissError = useSession((state) => state.dismissError)
+  const draftInjection = useSession((state) => state.draftInjection)
+  const consumeDraft = useSession((state) => state.consumeDraft)
+  const widget = useSession((state) => state.widget)
 
   useEffect(() => {
     const element = textareaRef.current
@@ -27,6 +30,12 @@ export function Composer(): React.JSX.Element {
     element.style.height = 'auto'
     element.style.height = `${Math.min(element.scrollHeight, 220)}px`
   }, [text])
+
+  useEffect(() => {
+    if (!draftInjection) return
+    setText(draftInjection.text)
+    consumeDraft()
+  }, [draftInjection, consumeDraft])
 
   const suggestions = useMemo(() => matchCommands(text, commands), [text, commands])
 
@@ -87,6 +96,10 @@ export function Composer(): React.JSX.Element {
           {queue.steering > 0 ? <span className="chip">排队指令 {queue.steering}</span> : null}
           {queue.followUp > 0 ? <span className="chip">后续消息 {queue.followUp}</span> : null}
         </div>
+      ) : null}
+
+      {widget && widget.placement === 'aboveEditor' ? (
+        <pre className="widget-block">{widget.lines.join('\n')}</pre>
       ) : null}
 
       <div className="composer-box">
@@ -153,6 +166,10 @@ export function Composer(): React.JSX.Element {
           )}
         </div>
       </div>
+
+      {widget && widget.placement === 'belowEditor' ? (
+        <pre className="widget-block">{widget.lines.join('\n')}</pre>
+      ) : null}
     </div>
   )
 }

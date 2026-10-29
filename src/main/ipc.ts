@@ -1,5 +1,5 @@
 import { ipcMain, type BrowserWindow } from 'electron'
-import type { PiCommand, PiStatus } from '../shared/protocol.js'
+import type { ExtensionUiResponse, PiCommand, PiStatus } from '../shared/protocol.js'
 import { IPC } from '../shared/protocol.js'
 import { PiManager } from './pi-manager.js'
 
@@ -21,6 +21,10 @@ export function registerIpc(manager: PiManager): void {
   })
 
   ipcMain.handle(IPC.statusGet, () => lastStatus)
+
+  ipcMain.handle(IPC.extensionResponse, (_event, response: ExtensionUiResponse) =>
+    manager.sendRaw({ ...response, type: 'extension_ui_response' })
+  )
 }
 
 /**

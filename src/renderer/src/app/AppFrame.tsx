@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { ExtensionDialog } from '../features/approval/ExtensionDialog'
+import { Toasts } from '../features/approval/Toasts'
 import { ChatFlow } from '../features/chat/ChatFlow'
 import { Composer } from '../features/composer/Composer'
 import { SessionSidebar } from '../features/sidebar-left/SessionSidebar'
@@ -6,12 +8,32 @@ import { SettingsDrawer } from '../features/settings/SettingsDrawer'
 import { ContextSidebar } from '../features/sidebar-right/ContextSidebar'
 import { useSession } from '../store/session'
 
+function StatusChips(): React.JSX.Element {
+  const statuses = useSession((state) => state.statuses)
+  const entries = Object.entries(statuses)
+  if (entries.length === 0) return <></>
+  return (
+    <>
+      {entries.map(([key, text]) => (
+        <span key={key} className="chip">
+          {text}
+        </span>
+      ))}
+    </>
+  )
+}
+
 export function AppFrame(): React.JSX.Element {
   const init = useSession((state) => state.init)
+  const theme = useSession((state) => state.theme)
 
   useEffect(() => {
     init()
   }, [init])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
 
   return (
     <div className="app">
@@ -22,6 +44,8 @@ export function AppFrame(): React.JSX.Element {
         <Composer />
       </main>
       <ContextSidebar />
+      <ExtensionDialog />
+      <Toasts />
     </div>
   )
 }
@@ -41,6 +65,7 @@ function TopBar(): React.JSX.Element {
         <span className={`dot ${connected ? 'dot-on' : 'dot-off'}`} />
         <span>{model ? model.name : '无模型'}</span>
         {thinkingLevel ? <span className="chip">thinking {thinkingLevel}</span> : null}
+        <StatusChips />
         <button type="button" className="btn btn-ghost" title="设置" onClick={() => setSettingsOpen(true)}>
           ⚙
         </button>

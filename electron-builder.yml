@@ -1,0 +1,19 @@
+appId: dev.pengdali.pi-dsk
+productName: Pi Desktop
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+asarUnpack:
+  - node_modules/node-pty/**
+mac:
+  target:
+    - dmg
+  category: public.app-category.developer-tools
+  identity: null
+  artifactName: ${productName}-${version}-${arch}.${ext}
+dmg:
+  title: Pi Desktop

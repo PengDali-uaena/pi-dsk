@@ -6,6 +6,7 @@ import type {
   ModelInfo,
   PiCommand,
   PiEvent,
+  ExtensionUiRequest,
   PiResponse,
   SessionSummaryInfo
 } from '@shared/protocol'
@@ -36,6 +37,12 @@ export interface SessionStore {
   sessionFile: string | null
   preview: FilePreviewInfo | null
   previewError: string | null
+  dialog: ExtensionUiRequest | null
+  toasts: { id: string; message: string; level: 'info' | 'warning' | 'error' }[]
+  statuses: Record<string, string>
+  widget: { lines: string[]; placement: 'aboveEditor' | 'belowEditor' } | null
+  draftInjection: { text: string; token: number } | null
+  theme: 'dark' | 'light'
 
   init: () => void
   refresh: () => Promise<void>
@@ -50,6 +57,10 @@ export interface SessionStore {
   pickWorkspace: () => Promise<void>
   openFile: (path: string) => Promise<void>
   closePreview: () => void
+  respondDialog: (response: { value?: string; confirmed?: boolean; cancelled?: boolean }) => Promise<void>
+  dismissToast: (id: string) => void
+  consumeDraft: () => void
+  setTheme: (theme: 'dark' | 'light') => void
 }
 
 let subscribed = false
@@ -79,12 +90,22 @@ export const useSession = create<SessionStore>((set, get) => ({
   sessionFile: null,
   preview: null,
   previewError: null,
+  dialog: null,
+  toasts: [],
+  statuses: {},
+  widget: null,
+  draftInjection: null,
+  theme: readStoredTheme(),
 
   init: () => {
     if (subscribed) return
     subscribed = true
 
     window.pi.onEvent((event: PiEvent) => {
+      if (event.type === 'extension_ui_request') {
+        applyExtensionUi(get, set, event as ExtensionUiRequest)
+        return
+      }
       const state = get()
       const chat = reduceChat(
         { items: state.items, liveId: state.liveId, running: state.running, queue: state.queue },
@@ -131,6 +152,22 @@ export const useSession = create<SessionStore>((set, get) => ({
 
     void get().refresh()
     void get().refreshSessions()
+  },
+
+  respondDialog: async (response) => {
+    const dialog = get().dialog
+    if (!dialog) return
+    await window.pi.respondExtension({ type: 'extension_ui_response', id: dialog.id, ...response })
+    set({ dialog: null })
+  },
+
+  dismissToast: (id: string) => set({ toasts: get().toasts.filter((toast) => toast.id !== id) }),
+
+  consumeDraft: () => set({ draftInjection: null }),
+
+  setTheme: (theme: 'dark' | 'light') => {
+    window.localStorage.setItem('pi-dsk:theme', theme)
+    set({ theme })
   },
 
   refreshSessions: async () => {
@@ -237,3 +274,57 @@ export const useSession = create<SessionStore>((set, get) => ({
 
   dismissError: () => set({ error: null })
 }))
+
+/** 扩展 UI 子协议：对话框进 store 由渲染层呈现，fire-and-forget 落到 toasts/statuses/widget。 */
+function applyExtensionUi(
+  get: () => SessionStore,
+  set: (patch: Partial<SessionStore>) => void,
+  request: ExtensionUiRequest
+): void {
+  switch (request.method) {
+    case 'select':
+    case 'confirm':
+    case 'input':
+    case 'editor':
+      set({ dialog: request })
+      return
+    case 'notify':
+      set({
+        toasts: [
+          ...get().toasts,
+          { id: request.id, message: request.message ?? '', level: request.notifyType ?? 'info' }
+        ]
+      })
+      return
+    case 'setStatus': {
+      const statuses = { ...get().statuses }
+      if (request.statusKey) {
+        if (request.statusText) statuses[request.statusKey] = request.statusText
+        else delete statuses[request.statusKey]
+      }
+      set({ statuses })
+      return
+    }
+    case 'setWidget':
+      set({
+        widget:
+          request.widgetLines && request.widgetLines.length > 0
+            ? { lines: request.widgetLines, placement: request.widgetPlacement ?? 'aboveEditor' }
+            : null
+      })
+      return
+    case 'setTitle':
+      if (request.title) document.title = request.title
+      return
+    case 'set_editor_text':
+      set({ draftInjection: { text: request.text ?? '', token: Date.now() } })
+      return
+    default:
+      return
+  }
+}
+
+function readStoredTheme(): 'dark' | 'light' {
+  const stored = window.localStorage.getItem('pi-dsk:theme')
+  return stored === 'light' ? 'light' : 'dark'
+}

@@ -1,5 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { fileURLToPath } from 'node:url'
+import { registerDesktopIpc } from './desktop-ipc.js'
+import { registerTerminalIpc } from './terminal.js'
 import { attachManager, registerIpc } from './ipc.js'
 import { PiManager } from './pi-manager.js'
 
@@ -43,6 +45,8 @@ function createWindow(onLoaded?: () => void): void {
 
 app.whenReady().then(() => {
   registerIpc(manager)
+  registerDesktopIpc(manager, () => mainWindow)
+  registerTerminalIpc(() => mainWindow, () => manager.workdir)
   const resendStatus = attachManager(manager, () => mainWindow)
   manager.on('warning', (message: string) => console.error('[pi]', message))
   manager.on('exit', (payload: { code: number | null; stderr?: string }) =>

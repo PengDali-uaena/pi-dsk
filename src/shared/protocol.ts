@@ -54,6 +54,79 @@ export interface CommandInfo {
   source: 'extension' | 'prompt' | 'skill'
 }
 
+export const DESKTOP_IPC = {
+  listSessions: 'dsk:sessions:list',
+  openSession: 'dsk:sessions:open',
+  pickWorkspace: 'dsk:workspace:pick',
+  listDirectory: 'dsk:fs:list',
+  appInfo: 'dsk:app:info',
+  openPath: 'dsk:app:openPath',
+  readFile: 'dsk:fs:read'
+} as const
+
+export const TERMINAL_IPC = {
+  start: 'dsk:term:start',
+  input: 'dsk:term:input',
+  resize: 'dsk:term:resize',
+  kill: 'dsk:term:kill',
+  data: 'dsk:term:data',
+  exit: 'dsk:term:exit'
+} as const
+
+export interface TerminalApi {
+  start: (cwd: string) => Promise<boolean>
+  input: (data: string) => Promise<boolean>
+  resize: (cols: number, rows: number) => Promise<boolean>
+  kill: () => Promise<boolean>
+  onData: (listener: (data: string) => void) => () => void
+  onExit: (listener: (code: number) => void) => () => void
+}
+
+export interface SessionSummaryInfo {
+  id: string
+  path: string
+  cwd: string
+  title: string
+  timestamp: string
+  updatedAt: number
+}
+
+export interface FileEntryInfo {
+  name: string
+  path: string
+  isDirectory: boolean
+}
+
+export interface FilePreviewInfo {
+  path: string
+  text: string
+  truncated: boolean
+  binary: boolean
+}
+
+export interface OpenSessionResult {
+  ok: boolean
+  cwd?: string
+  error?: string
+}
+
+export interface AppInfo {
+  piBinary: string
+  sessionRoot: string
+  shell: string
+  cwd: string
+}
+
+export interface DesktopApi {
+  appInfo: () => Promise<AppInfo>
+  openPath: (path: string) => Promise<boolean>
+  listSessions: () => Promise<SessionSummaryInfo[]>
+  openSession: (path: string) => Promise<OpenSessionResult>
+  pickWorkspace: () => Promise<OpenSessionResult>
+  listDirectory: (path: string) => Promise<FileEntryInfo[]>
+  readFile: (path: string) => Promise<FilePreviewInfo>
+}
+
 export type PiStatus =
   | { state: 'starting' }
   | { state: 'ready'; cwd?: string }
@@ -67,6 +140,8 @@ export interface PiEvent {
 
 export interface PiApi {
   command: (command: PiCommand) => Promise<PiResponse>
+  desktop: DesktopApi
+  terminal: TerminalApi
   getStatus: () => Promise<PiStatus>
   onEvent: (listener: (event: PiEvent) => void) => () => void
   onStatus: (listener: (status: PiStatus) => void) => () => void

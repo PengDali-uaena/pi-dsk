@@ -53,6 +53,22 @@ describe('PiManager', () => {
     await expect(pending).rejects.toThrow(/pi 进程已退出/)
   })
 
+  it('重启后迟到的旧进程 exit 不影响新进程', async () => {
+    const first = fakeSpawn()
+    const second = fakeSpawn()
+    const spawnFn = vi.fn().mockReturnValueOnce(first.child).mockReturnValueOnce(second.child) as any
+    const manager = new PiManager({ spawnFn })
+    manager.start()
+    manager.restart({ cwd: '/tmp', sessionPath: '/tmp/s.jsonl' })
+
+    expect(spawnFn).toHaveBeenLastCalledWith(expect.any(String), ['--mode', 'rpc', '--session', '/tmp/s.jsonl'], expect.objectContaining({ cwd: '/tmp' }))
+    first.child.emit('exit', 143, 'SIGTERM')
+
+    const pending = manager.request({ type: 'get_state' })
+    second.child.stdout.write(JSON.stringify({ id: '1', type: 'response', command: 'get_state', success: true }) + '\n')
+    await expect(pending).resolves.toMatchObject({ success: true })
+  })
+
   it('未启动时请求直接失败', async () => {
     const manager = new PiManager({ spawnFn: fakeSpawn().spawnFn })
     await expect(manager.request({ type: 'abort' })).rejects.toThrow(/pi 进程未启动/)

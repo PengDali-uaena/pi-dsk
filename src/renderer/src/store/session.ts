@@ -1,6 +1,14 @@
 import { create } from 'zustand'
 import { itemsFromMessages, reduceChat, type ChatItem } from '@shared/chat-reducer'
-import type { CommandInfo, ModelInfo, PiCommand, PiEvent, PiResponse } from '@shared/protocol'
+import type {
+  CommandInfo,
+  FilePreviewInfo,
+  ModelInfo,
+  PiCommand,
+  PiEvent,
+  PiResponse,
+  SessionSummaryInfo
+} from '@shared/protocol'
 
 interface QueueState {
   steering: number
@@ -24,6 +32,10 @@ export interface SessionStore {
   commands: CommandInfo[]
   error: string | null
   ready: boolean
+  sessions: SessionSummaryInfo[]
+  sessionFile: string | null
+  preview: FilePreviewInfo | null
+  previewError: string | null
 
   init: () => void
   refresh: () => Promise<void>
@@ -33,6 +45,11 @@ export interface SessionStore {
   switchThinking: (level: string) => Promise<void>
   newSession: () => Promise<void>
   dismissError: () => void
+  refreshSessions: () => Promise<void>
+  openSession: (path: string) => Promise<void>
+  pickWorkspace: () => Promise<void>
+  openFile: (path: string) => Promise<void>
+  closePreview: () => void
 }
 
 let subscribed = false
@@ -58,6 +75,10 @@ export const useSession = create<SessionStore>((set, get) => ({
   commands: [],
   error: null,
   ready: false,
+  sessions: [],
+  sessionFile: null,
+  preview: null,
+  previewError: null,
 
   init: () => {
     if (subscribed) return
@@ -82,12 +103,14 @@ export const useSession = create<SessionStore>((set, get) => ({
         patch.sessionName = typeof event.name === 'string' ? event.name : null
       }
       set(patch as SessionStore)
+      if (event.type === 'agent_settled') void get().refreshSessions()
     })
 
     window.pi.onStatus((status) => {
       if (status.state === 'ready') {
         set({ connected: true, statusMessage: null, cwd: status.cwd ?? null })
         void get().refresh()
+        void get().refreshSessions()
         return
       }
       if (status.state === 'starting') {
@@ -107,7 +130,39 @@ export const useSession = create<SessionStore>((set, get) => ({
     })
 
     void get().refresh()
+    void get().refreshSessions()
   },
+
+  refreshSessions: async () => {
+    const sessions = await window.pi.desktop.listSessions()
+    set({ sessions })
+  },
+
+  openSession: async (path: string) => {
+    const result = await window.pi.desktop.openSession(path)
+    if (!result.ok) {
+      set({ error: result.error ?? '打开会话失败' })
+      return
+    }
+    set({ items: [], liveId: null, running: false, preview: null, previewError: null })
+  },
+
+  pickWorkspace: async () => {
+    const result = await window.pi.desktop.pickWorkspace()
+    if (!result.ok) return
+    set({ items: [], liveId: null, running: false, preview: null, previewError: null, cwd: result.cwd ?? null })
+  },
+
+  openFile: async (path: string) => {
+    try {
+      const preview = await window.pi.desktop.readFile(path)
+      set({ preview, previewError: null })
+    } catch (error) {
+      set({ preview: null, previewError: error instanceof Error ? error.message : String(error) })
+    }
+  },
+
+  closePreview: () => set({ preview: null, previewError: null }),
 
   refresh: async () => {
     const state = await call({ type: 'get_state' })
@@ -115,6 +170,7 @@ export const useSession = create<SessionStore>((set, get) => ({
       set({
         sessionId: state.data?.sessionId ?? null,
         sessionName: state.data?.sessionName ?? null,
+        sessionFile: state.data?.sessionFile ?? null,
         model: state.data?.model ?? null,
         thinkingLevel: state.data?.thinkingLevel ?? null,
         running: Boolean(state.data?.isStreaming),

@@ -1,7 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ChatFlow } from '../features/chat/ChatFlow'
 import { Composer } from '../features/composer/Composer'
 import { SessionSidebar } from '../features/sidebar-left/SessionSidebar'
+import { SettingsDrawer } from '../features/settings/SettingsDrawer'
 import { ContextSidebar } from '../features/sidebar-right/ContextSidebar'
 import { useSession } from '../store/session'
 
@@ -26,6 +27,7 @@ export function AppFrame(): React.JSX.Element {
 }
 
 function TopBar(): React.JSX.Element {
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const sessionName = useSession((state) => state.sessionName)
   const sessionId = useSession((state) => state.sessionId)
   const model = useSession((state) => state.model)
@@ -39,7 +41,11 @@ function TopBar(): React.JSX.Element {
         <span className={`dot ${connected ? 'dot-on' : 'dot-off'}`} />
         <span>{model ? model.name : '无模型'}</span>
         {thinkingLevel ? <span className="chip">thinking {thinkingLevel}</span> : null}
+        <button type="button" className="btn btn-ghost" title="设置" onClick={() => setSettingsOpen(true)}>
+          ⚙
+        </button>
       </div>
+      {settingsOpen ? <SettingsDrawer onClose={() => setSettingsOpen(false)} /> : null}
     </header>
   )
 }

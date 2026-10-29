@@ -26,9 +26,9 @@ export class PiManager extends EventEmitter {
   private readonly pending = new Map<string, PendingRequest>()
   private nextId = 0
   private readonly binary: string
-  private readonly args: string[]
-  private readonly cwd: string
-  private readonly env: NodeJS.ProcessEnv
+  private args: string[]
+  private cwd: string
+  private env: NodeJS.ProcessEnv
   private readonly spawnFn: typeof nodeSpawn
   private stderrTail = ''
 
@@ -39,6 +39,11 @@ export class PiManager extends EventEmitter {
     this.cwd = options.cwd ?? process.cwd()
     this.env = options.env ?? process.env
     this.spawnFn = options.spawnFn ?? nodeSpawn
+  }
+
+  /** 实际使用的 pi 可执行文件路径。 */
+  get binaryPath(): string {
+    return this.binary
   }
 
   /** pi 子进程的工作目录，也就是会话默认工作区。 */
@@ -62,26 +67,37 @@ export class PiManager extends EventEmitter {
       stdio: ['pipe', 'pipe', 'pipe']
     }) as ChildProcessWithoutNullStreams
 
+    // 重启后旧子进程的残留输出不能影响新进程：所有回调都先比对身份。
+    const isCurrent = (): boolean => this.child === child
+
     const decoder = createJsonlDecoder({
-      onRecord: (record) => this.handleRecord(record),
-      onError: (error, line) => this.emit('warning', `无法解析的记录：${error.message} :: ${line.slice(0, 200)}`)
+      onRecord: (record) => {
+        if (isCurrent()) this.handleRecord(record)
+      },
+      onError: (error, line) => {
+        if (isCurrent()) this.emit('warning', `无法解析的记录：${error.message} :: ${line.slice(0, 200)}`)
+      }
     })
 
     child.stdout.setEncoding('utf8')
     child.stdout.on('data', (chunk: string) => decoder.push(chunk))
     child.stderr.setEncoding('utf8')
     child.stderr.on('data', (chunk: string) => {
+      if (!isCurrent()) return
       this.stderrTail = (this.stderrTail + chunk).slice(-4000)
     })
     child.on('exit', (code, signal) => {
       decoder.flush()
+      if (!isCurrent()) return
       this.child = null
       const error = new Error(`pi 进程已退出（code=${code} signal=${signal}）`)
       for (const [, request] of this.pending) request.reject(error)
       this.pending.clear()
       this.emit('exit', { code, signal, stderr: this.stderrTail })
     })
-    child.on('error', (error) => this.emit('warning', error.message))
+    child.on('error', (error) => {
+      if (isCurrent()) this.emit('warning', error.message)
+    })
 
     this.child = child
     this.emit('started')
@@ -95,6 +111,15 @@ export class PiManager extends EventEmitter {
       this.pending.set(id, { resolve, reject })
       this.child!.stdin.write(payload + '\n')
     })
+  }
+
+  /** 换工作区或换会话：重启子进程（会话的 cwd 决定工具执行目录）。 */
+  restart(options: { cwd?: string; sessionPath?: string }): void {
+    this.dispose()
+    if (options.cwd) this.cwd = options.cwd
+    this.args = options.sessionPath ? ['--mode', 'rpc', '--session', options.sessionPath] : ['--mode', 'rpc']
+    this.stderrTail = ''
+    this.start()
   }
 
   dispose(): void {

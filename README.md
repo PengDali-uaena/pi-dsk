@@ -1,6 +1,13 @@
 # Pi Desktop（pi-dsk）
 
-给 [Pi Agent](https://github.com/earendil-works/pi-coding-agent) 做的桌面图形界面。界面结构与功能分层对标 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的桌面端，agent 能力完全复用本机已安装的 `pi`。
+给 [Pi Agent](https://github.com/earendil-works/pi-coding-agent) 做的桌面图形界面。
+
+[![release](https://img.shields.io/github/v/release/PengDali-uaena/pi-dsk)](https://github.com/PengDali-uaena/pi-dsk/releases/latest)
+
+**下载（macOS arm64）**：[Pi.Desktop-0.0.1-arm64.dmg](https://github.com/PengDali-uaena/pi-dsk/releases/download/v0.0.1/Pi.Desktop-0.0.1-arm64.dmg) · 119 MB
+sha256 `5ac97d0bd900d47593c3e1f784be96bc9f3894845ed27fcc6297856b3781671e`
+
+包未签名，首次打开需右键 →「打开」。运行前本机要已装好 Pi CLI（`pi --version` 有输出）。界面结构与功能分层对标 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的桌面端，agent 能力完全复用本机已安装的 `pi`。
 
 > 它不是一个新 agent，只是 Pi 的一个图形前端：所有推理、工具调用、会话存储都还是 Pi 自己那一套。
 

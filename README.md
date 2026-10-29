@@ -2,14 +2,22 @@
 
 给 [Pi Agent](https://github.com/earendil-works/pi-coding-agent) 做的桌面图形界面。
 
-[![release](https://img.shields.io/github/v/release/PengDali-uaena/pi-dsk)](https://github.com/PengDali-uaena/pi-dsk/releases/latest)
-
-**下载（macOS arm64）**：[Pi.Desktop-0.0.1-arm64.dmg](https://github.com/PengDali-uaena/pi-dsk/releases/download/v0.0.1/Pi.Desktop-0.0.1-arm64.dmg) · 119 MB
-sha256 `5ac97d0bd900d47593c3e1f784be96bc9f3894845ed27fcc6297856b3781671e`
-
-包未签名，首次打开需右键 →「打开」。运行前本机要已装好 Pi CLI（`pi --version` 有输出）。界面结构与功能分层对标 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的桌面端，agent 能力完全复用本机已安装的 `pi`。
+界面结构与功能分层对标 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的桌面端，agent 能力完全复用本机已安装的 `pi`。
 
 > 它不是一个新 agent，只是 Pi 的一个图形前端：所有推理、工具调用、会话存储都还是 Pi 自己那一套。
+
+[![release](https://img.shields.io/github/v/release/PengDali-uaena/pi-dsk)](https://github.com/PengDali-uaena/pi-dsk/releases/latest)
+
+## 安装
+
+**下载（macOS arm64）**：[Pi.Desktop-0.0.1-arm64.dmg](https://github.com/PengDali-uaena/pi-dsk/releases/download/v0.0.1/Pi.Desktop-0.0.1-arm64.dmg) · 119 MB
+
+```sh
+sha256 Pi.Desktop-0.0.1-arm64.dmg
+# 5ac97d0bd900d47593c3e1f784be96bc9f3894845ed27fcc6297856b3781671e
+```
+
+拖进「应用程序」即可。包未签名，首次打开需右键 →「打开」（或在「系统设置 → 隐私与安全性」里放行）。运行前本机要已装好 Pi CLI：`pi --version` 有输出。
 
 ## 功能
 
@@ -38,13 +46,13 @@ Electron 主进程 ── spawn ──> pi --mode rpc（JSONL 命令 / 事件）
 
 事件到界面的映射集中在 `src/shared/chat-reducer.ts`（纯函数、有单测）：`text_delta` 增量追加，`text_end` / `toolcall_end` 用权威内容覆盖，`message_end` 整体替换消息；工具卡片按 `toolCallId` 聚合。
 
-## 环境要求
+## 从源码运行
 
-- 已安装并可运行 Pi CLI（`pi --version` 有输出）
 - Node.js 20+
+- 已安装并可运行 Pi CLI（`pi --version` 有输出）
 - 目前只在 macOS arm64 上验证过
 
-## 开发
+
 
 ```sh
 npm install
